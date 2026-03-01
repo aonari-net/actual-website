@@ -15,14 +15,14 @@ export default async function DashboardPage() {
     }
 
     // Fetch user data from DB
-    const user = db.select().from(users).where(eq(users.id, Number(session.userId))).get()
+    const [user] = await db.select().from(users).where(eq(users.id, Number(session.userId))).limit(1)
 
     if (!user) {
         redirect("/login")
     }
 
     // Fetch subscription
-    const sub = db.select().from(subscriptions).where(eq(subscriptions.userId, user.id)).get()
+    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, user.id)).limit(1)
 
     return (
         <div className="min-h-screen bg-background flex flex-col">

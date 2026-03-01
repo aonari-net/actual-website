@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, subscriptions } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 
 const ALLOWED_IP = "46.138.229.243";
@@ -25,7 +25,7 @@ export async function GET() {
     }
 
     try {
-        const allUsers = db
+        const allUsers = await db
             .select({
                 id: users.id,
                 name: users.name,
@@ -36,8 +36,7 @@ export async function GET() {
                 licenseKey: subscriptions.licenseKey,
             })
             .from(users)
-            .leftJoin(subscriptions, eq(users.id, subscriptions.userId))
-            .all();
+            .leftJoin(subscriptions, eq(users.id, subscriptions.userId));
 
         return NextResponse.json(allUsers);
     } catch (error) {
@@ -55,10 +54,9 @@ export async function PATCH(req: Request) {
     try {
         const { userId, adminNickname } = await req.json();
 
-        db.update(users)
+        await db.update(users)
             .set({ adminNickname })
-            .where(eq(users.id, userId))
-            .run();
+            .where(eq(users.id, userId));
 
         return NextResponse.json({ success: true });
     } catch (error) {

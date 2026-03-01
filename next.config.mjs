@@ -4,9 +4,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  experimental: {
-    serverExternalPackages: ["better-sqlite3"],
-  },
   typescript: {
     ignoreBuildErrors: true,
   }

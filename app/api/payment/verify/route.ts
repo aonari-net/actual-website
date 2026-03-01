@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { db } from "@/db";
+import { client, db } from "@/db";
 import { subscriptions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import fs from "fs";
 import path from "path";
-import Database from "better-sqlite3";
 
 type VerifyRequestBody = {
     plan?: string;
@@ -89,9 +88,6 @@ async function findMatchingBtcPayment(fromAddress: string, toAddress: string, mi
 }
 
 export async function POST(req: Request) {
-    const sqlitePath = path.join(process.cwd(), "sqlite.db");
-    const sqlite = new Database(sqlitePath);
-
     try {
         const session = await getSession();
         if (!session || !session.userId) {
@@ -141,11 +137,13 @@ export async function POST(req: Request) {
         }
 
         // Keep a persistent ledger of consumed keys and used tx hashes.
-        sqlite.exec(`
+        await client.execute(`
           CREATE TABLE IF NOT EXISTS used_keys (
             key TEXT PRIMARY KEY,
             used_at INTEGER NOT NULL
-          );
+          )
+        `);
+        await client.execute(`
           CREATE TABLE IF NOT EXISTS verified_transactions (
             tx_hash TEXT PRIMARY KEY,
             user_id INTEGER NOT NULL,
@@ -153,21 +151,29 @@ export async function POST(req: Request) {
             address TEXT,
             amount TEXT,
             created_at INTEGER NOT NULL
-          );
+          )
         `);
 
-        sqlite.prepare(`
+        await client.execute(`
           INSERT OR IGNORE INTO used_keys(key, used_at)
           SELECT license_key, CAST(strftime('%s','now') AS INTEGER)
           FROM subscriptions
           WHERE license_key IS NOT NULL
-        `).run();
+        `);
 
         const userId = Number(session.userId);
-        const existingSub = db.select().from(subscriptions).where(eq(subscriptions.userId, Number(session.userId))).get();
+        const [existingSub] = await db
+            .select()
+            .from(subscriptions)
+            .where(eq(subscriptions.userId, Number(session.userId)))
+            .limit(1);
         const normalizedTxHash = matchedTx.txid.trim().toLowerCase();
 
-        if (sqlite.prepare("SELECT tx_hash FROM verified_transactions WHERE tx_hash = ?").get(normalizedTxHash)) {
+        const usedTx = await client.execute({
+            sql: "SELECT tx_hash FROM verified_transactions WHERE tx_hash = ? LIMIT 1",
+            args: [normalizedTxHash],
+        });
+        if (usedTx.rows.length > 0) {
             return NextResponse.json(
                 { status: "error", message: "This payment transaction was already used" },
                 { status: 409 }
@@ -178,11 +184,13 @@ export async function POST(req: Request) {
 
         if (!assignedKey) {
             const shuffledKeys = [...allKeys].sort(() => Math.random() - 0.5);
-            const claimKey = sqlite.prepare("INSERT OR IGNORE INTO used_keys(key, used_at) VALUES (?, ?)");
 
             for (const candidateKey of shuffledKeys) {
-                const result = claimKey.run(candidateKey, Math.floor(Date.now() / 1000));
-                if (result.changes === 1) {
+                const result = await client.execute({
+                    sql: "INSERT OR IGNORE INTO used_keys(key, used_at) VALUES (?, ?)",
+                    args: [candidateKey, Math.floor(Date.now() / 1000)],
+                });
+                if ((result.rowsAffected ?? 0) === 1) {
                     assignedKey = candidateKey;
                     break;
                 }
@@ -194,7 +202,7 @@ export async function POST(req: Request) {
         }
 
         if (existingSub) {
-            db.update(subscriptions)
+            await db.update(subscriptions)
                 .set({
                     plan: plan || "monthly",
                     price: (price || "0").toString(),
@@ -202,30 +210,32 @@ export async function POST(req: Request) {
                     licenseKey: assignedKey,
                     startDate: new Date(),
                 })
-                .where(eq(subscriptions.id, existingSub.id))
-                .run();
+                .where(eq(subscriptions.id, existingSub.id));
         } else {
-            db.insert(subscriptions).values({
+            await db.insert(subscriptions).values({
                 userId,
                 plan: plan || "monthly",
                 price: (price || "0").toString(),
                 status: "active",
                 licenseKey: assignedKey,
                 startDate: new Date(),
-            }).run();
+            });
         }
 
-        sqlite.prepare(`
-          INSERT INTO verified_transactions(tx_hash, user_id, crypto, address, amount, created_at)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(
-            normalizedTxHash,
-            userId,
-            normalizedCrypto,
-            normalizedSender,
-            amount?.toString() || null,
-            Math.floor(Date.now() / 1000)
-        );
+        await client.execute({
+            sql: `
+              INSERT INTO verified_transactions(tx_hash, user_id, crypto, address, amount, created_at)
+              VALUES (?, ?, ?, ?, ?, ?)
+            `,
+            args: [
+                normalizedTxHash,
+                userId,
+                normalizedCrypto,
+                normalizedSender,
+                amount?.toString() || null,
+                Math.floor(Date.now() / 1000),
+            ],
+        });
 
         return NextResponse.json({
             status: "success",
@@ -238,7 +248,5 @@ export async function POST(req: Request) {
             { status: "error", message: "Verification failed due to server error" },
             { status: 500 }
         );
-    } finally {
-        sqlite.close();
     }
 }

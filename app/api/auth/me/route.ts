@@ -14,11 +14,11 @@ export async function GET() {
             return NextResponse.json({ user: null });
         }
 
-        const user = db.select({
+        const [user] = await db.select({
             id: users.id,
             name: users.name,
             email: users.email
-        }).from(users).where(eq(users.id, Number(session.userId))).get();
+        }).from(users).where(eq(users.id, Number(session.userId))).limit(1);
 
         return NextResponse.json({ user });
     } catch (error) {

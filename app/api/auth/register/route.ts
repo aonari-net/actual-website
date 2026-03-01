@@ -17,7 +17,7 @@ export async function POST(req: Request) {
         }
 
         // Check if user exists
-        const existingUser = db.select().from(users).where(eq(users.email, email)).get();
+        const [existingUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
         if (existingUser) {
             return NextResponse.json(
@@ -30,21 +30,21 @@ export async function POST(req: Request) {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Insert user
-        const newUser = db.insert(users).values({
+        const [newUser] = await db.insert(users).values({
             name,
             email,
             password: hashedPassword,
-        }).returning().get();
+        }).returning();
 
         // Give a default free subscription row just for the dashboard mock
         if (newUser) {
-            db.insert(subscriptions).values({
+            await db.insert(subscriptions).values({
                 userId: newUser.id,
                 plan: "free",
                 price: "0",
                 status: "active",
                 startDate: new Date(),
-            }).run();
+            });
 
             // Create session via Jose
             await createSession(newUser.id, newUser.email);
