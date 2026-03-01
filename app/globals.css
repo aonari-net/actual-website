@@ -1,0 +1,170 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 220 18% 8%;
+    --foreground: 210 14% 92%;
+    --card: 220 16% 11%;
+    --card-foreground: 210 14% 92%;
+    --popover: 220 16% 11%;
+    --popover-foreground: 210 14% 92%;
+    --primary: 210 18% 96%;
+    --primary-foreground: 220 18% 10%;
+    --secondary: 220 14% 16%;
+    --secondary-foreground: 210 14% 86%;
+    --muted: 220 14% 14%;
+    --muted-foreground: 220 10% 62%;
+    --accent: 220 12% 19%;
+    --accent-foreground: 210 14% 92%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 12% 24%;
+    --input: 220 14% 22%;
+    --ring: 211 90% 64%;
+    --chart-1: 212 96% 68%;
+    --chart-2: 218 88% 72%;
+    --chart-3: 194 92% 58%;
+    --chart-4: 185 76% 50%;
+    --chart-5: 221 40% 70%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(1200px 700px at 100% -5%, hsl(220 85% 25% / 0.22), transparent 55%),
+      radial-gradient(1000px 600px at -5% 0%, hsl(200 80% 24% / 0.18), transparent 50%),
+      linear-gradient(to bottom, hsl(var(--background)), hsl(220 22% 6%));
+    background-attachment: fixed;
+  }
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+html {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+  scroll-behavior: auto; /* Let Lenis handle smooth scroll */
+}
+
+/* Animated glow effect */
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes orbit {
+  0% {
+    transform: rotate(0deg) translateX(120px) rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg) translateX(120px) rotate(-360deg);
+  }
+}
+
+@keyframes orbit-reverse {
+  0% {
+    transform: rotate(0deg) translateX(80px) rotate(0deg);
+  }
+  100% {
+    transform: rotate(-360deg) translateX(80px) rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes count-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 10s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 12s ease-in-out infinite;
+}
+
+.animate-orbit {
+  animation: orbit 52s linear infinite;
+}
+
+.animate-orbit-reverse {
+  animation: orbit-reverse 46s linear infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(0 0% 20%) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 6s ease-in-out infinite;
+}
+
+.animate-dash {
+  animation: dash 4s ease-in-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
