@@ -2,6 +2,10 @@ import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import * as schema from "./schema";
 
-const url = process.env.DATABASE_URL || "file:sqlite.db";
-export const client = createClient({ url });
+const client = createClient({
+  url: process.env.DATABASE_URL!,
+  authToken: process.env.TURSO_AUTH_TOKEN,
+});
+
+export { client };
 export const db = drizzle(client, { schema });
